@@ -1,0 +1,6 @@
+{
+  "name": "NovaQuant",
+  "description": "A production-ready SaaS platform called NovaQuant supporting Multi-Tenant exchange integrations, AI Trading Engine backtester, subscription system, admin console, and the proprietary AI Gas revenue model.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

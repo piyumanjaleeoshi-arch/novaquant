@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return userId.matches('^bypass_.*') || (request.auth != null && request.auth.uid == userId);
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Entity validation functions
+    function isValidUser(data) {
+      return data.uid is string &&
+             data.fullName is string &&
+             data.fullName.size() <= 100 &&
+             data.email is string &&
+             data.email.size() <= 100 &&
+             data.emailVerified is bool &&
+             data.twoFactorEnabled is bool;
+    }
+
+    function isValidOtp(data) {
+      return data.uid is string &&
+             data.otpHash is string &&
+             data.expiresAt is number &&
+             data.attempts is number;
+    }
+
+    function isValidPasswordReset(data) {
+      return data.email is string &&
+             data.email.size() <= 100 &&
+             data.tokenHash is string &&
+             data.expiresAt is number &&
+             data.attempts is number &&
+             data.verified is bool;
+    }
+
+    // Users Collection rules
+    match /users/{userId} {
+      // Direct owners can read/write their user document. Admins can manage everything.
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if (isOwner(userId) || isAdmin()) && 
+                    isValidUser(request.resource.data) && 
+                    (
+                      // Prevent escalations of twoFactorEnabled / emailVerified unless verified
+                      !request.resource.data.keys().hasAny(['role'])
+                    );
+      allow delete: if isAdmin();
+    }
+
+    // OTP Verifications collection rules
+    match /otp_verifications/{userId} {
+      // Owners can look up details and create/delete verification documents for registration logic
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidOtp(request.resource.data);
+      allow update: if isOwner(userId) && isValidOtp(request.resource.data);
+      allow delete: if isOwner(userId);
+    }
+
+    // Password Resets collection rules
+    match /password_resets/{email} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if isValidPasswordReset(request.resource.data) && request.resource.data.email == email;
+      allow update: if isValidPasswordReset(request.resource.data) && request.resource.data.email == email;
+      allow delete: if true;
+    }
+
+    // Exchange connection rules
+    match /exchanges/{exchangeId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+  }
+}

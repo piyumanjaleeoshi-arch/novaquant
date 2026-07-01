@@ -1,0 +1,176 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-slate-950: #001210;
+  --color-slate-900: #02201d;
+  --color-slate-850: #032b27;
+  --color-slate-800: #053b35;
+  --color-slate-750: #07473f;
+  --color-slate-700: #095950;
+  --color-slate-600: #117d71;
+  --color-slate-500: #1ca393;
+  --color-slate-400: #3db8aa;
+  --color-slate-350: #79d2c7;
+  --color-slate-300: #bdebe5;
+  --color-slate-200: #e2f7f5;
+  
+  /* Map Sky/Blue to golden mustard values to instantly recolor active badges, buttons and titles */
+  --color-sky-400: #e2b13c;
+  --color-sky-500: #d49f1a;
+  --color-sky-600: #b5850e;
+  --color-sky-800: #8a6405;
+  --color-sky-900: #5c4202;
+  --color-sky-950: #2b1f01;
+  
+  /* Robust teal/green indicators */
+  --color-emerald-400: #1ca393;
+  --color-emerald-500: #149b8c;
+  --color-emerald-650: #0d5e53;
+  
+  /* Map Indigo to dark hunter teal and vibrant mustard gold/teal for backgrounds and active statuses */
+  --color-indigo-400: #e2b13c;
+  --color-indigo-500: #149b8c;
+  --color-indigo-600: #ca9813;
+  --color-indigo-800: #8a6907;
+  --color-indigo-950: #021a17;
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #001210;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #f1f5f9;
+}
+
+/* Custom Sleek styling definitions */
+.sleek-gradient-bg {
+  background-color: #001210;
+  background-image: radial-gradient(circle at top right, rgba(226, 177, 60, 0.12), rgba(0, 18, 16, 0)),
+                    radial-gradient(circle at bottom left, rgba(28, 163, 147, 0.1), rgba(0, 18, 16, 0));
+  background-attachment: fixed;
+}
+
+.sleek-card {
+  background: rgba(2, 32, 29, 0.75) !important;
+  border: 1px solid rgba(226, 177, 60, 0.18) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(12px);
+}
+
+.sleek-header {
+  background: rgba(1, 18, 16, 0.85) !important;
+  border-bottom: 1px solid rgba(226, 177, 60, 0.22) !important;
+  backdrop-filter: blur(12px);
+}
+
+.sleek-sidebar {
+  background: #011715 !important;
+  border-right: 1px solid rgba(226, 177, 60, 0.15) !important;
+}
+
+.sleek-label {
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  color: #8da49c !important;
+  font-weight: 500 !important;
+}
+
+.sleek-value {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  color: #fafcf8 !important;
+}
+
+.sleek-trend-up {
+  color: #1ca393 !important;
+}
+
+.sleek-trend-down {
+  color: #f87171 !important;
+}
+
+.sleek-indicator-tag {
+  font-size: 10px !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  font-weight: 600 !important;
+  display: inline-block !important;
+}
+
+.sleek-tag-success {
+  background: rgba(28, 163, 147, 0.1) !important;
+  color: #1b9d8e !important;
+}
+
+.sleek-tag-warning {
+  background: rgba(226, 177, 60, 0.1) !important;
+  color: #d49f1a !important;
+}
+
+.sleek-status-pill {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.sleek-pill-active {
+  background: #1ca393;
+  box-shadow: 0 0 10px #1ca393;
+}
+
+.sleek-trade-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  font-size: 13px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(226, 177, 60, 0.1);
+}
+
+.sleek-trade-row:last-child {
+  border: 0;
+}
+
+.sleek-balance-hero {
+  font-size: 32px;
+  font-weight: 800;
+  background: linear-gradient(to right, #e2b13c, #1ca393);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #001210;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(226, 177, 60, 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(226, 177, 60, 0.4);
+}
+
+/* Maintain dark theme backgrounds and light text during browser autocomplete & autofill */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0px 1000px #001210 inset !important;
+  -webkit-text-fill-color: #e2f7f5 !important;
+  box-shadow: 0 0 0px 1000px #001210 inset !important;
+  border-color: rgba(61, 184, 170, 0.5) !important;
+  caret-color: #e2f7f5 !important;
+}
+

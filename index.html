@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NovaQuant</title>
+    <script>
+      // Pre-emptively capture and suppress benign Vite/HMR WebSocket connection errors 
+      // before any ESM modules or Vite client code can load and trigger unhandled rejections.
+      (function() {
+        var isBenignWebsocketError = function(message) {
+          if (!message) return false;
+          var low = String(message).toLowerCase();
+          return low.indexOf('websocket') !== -1 || 
+                 low.indexOf('vite') !== -1 || 
+                 low.indexOf('hmr') !== -1 || 
+                 low.indexOf('closed without opened') !== -1;
+        };
+
+        window.addEventListener('unhandledrejection', function(event) {
+          var reason = event.reason;
+          var msg = reason ? (reason.message || String(reason)) : '';
+          if (isBenignWebsocketError(msg)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            console.info('[Vite Pre-emptive Rejection Suppressed]:', msg);
+          }
+        }, true);
+
+        window.addEventListener('error', function(event) {
+          var msg = event.message || '';
+          if (isBenignWebsocketError(msg)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            console.info('[Vite Pre-emptive Error Suppressed]:', msg);
+          }
+        }, true);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

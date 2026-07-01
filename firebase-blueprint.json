@@ -1,0 +1,182 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "NovaQuant production-grade user account profile stored in Firestore.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string"
+        },
+        "fullName": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "emailVerified": {
+          "type": "boolean"
+        },
+        "twoFactorEnabled": {
+          "type": "boolean"
+        },
+        "twoFactorSecret": {
+          "type": "string"
+        },
+        "encryptedBinanceApiKey": {
+          "type": "string"
+        },
+        "encryptedBinanceApiSecret": {
+          "type": "string"
+        },
+        "tradingEnabled": {
+          "type": "boolean"
+        },
+        "exchangeConnected": {
+          "type": "boolean"
+        },
+        "walletValue": {
+          "type": "number"
+        },
+        "netCapital": {
+          "type": "number"
+        },
+        "availableBalance": {
+          "type": "number"
+        },
+        "exchangeBalance": {
+          "type": "number"
+        },
+        "netCapitalValue": {
+          "type": "number"
+        },
+        "connectionStatus": {
+          "type": "string"
+        },
+        "lastSync": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "lastLogin": {
+          "type": "string"
+        }
+      },
+      "required": ["uid", "fullName", "email", "emailVerified", "twoFactorEnabled", "createdAt", "lastLogin"]
+    },
+    "OtpVerification": {
+      "title": "OtpVerification",
+      "description": "Secure OTP details for registering or resetting access verified under 10-min expiration TTL constraints and maximum 5-attempt retry ceilings.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Matching target Firebase Auth uid."
+        },
+        "otpHash": {
+          "type": "string",
+          "description": "Secure SHA-256 cryptographically protection digest of the OTP code to prevent server-side DB token leakage."
+        },
+        "expiresAt": {
+          "type": "number",
+          "description": "Millisecond-precise epoch expiry timestamp (typically 10 minutes from creation)."
+        },
+        "attempts": {
+          "type": "number",
+          "description": "Counter tracking incorrect code submittal attempts with a ceiling limit of 5 inputs."
+        },
+        "lastResent": {
+          "type": "number",
+          "description": "Rate-limit guard counter for sending codes."
+        }
+      },
+      "required": ["uid", "otpHash", "expiresAt", "attempts"]
+    },
+    "PasswordReset": {
+      "title": "PasswordReset",
+      "description": "Hashed password reset tokens verified under 30-min expiration TTL constraints and maximum 5-attempt retry ceilings.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "The target email being reset."
+        },
+        "tokenHash": {
+          "type": "string",
+          "description": "Secure SHA-256 hash of the reset token."
+        },
+        "expiresAt": {
+          "type": "number",
+          "description": "Millisecond-precise epoch expiry timestamp (30 minutes from creation)."
+        },
+        "attempts": {
+          "type": "number",
+          "description": "Counter tracking incorrect code submittal attempts up to 5."
+        },
+        "lastResent": {
+          "type": "number",
+          "description": "Rate-limit guard timestamp."
+        },
+        "verified": {
+          "type": "boolean",
+          "description": "Whether the token has been verified successfully."
+        }
+      },
+      "required": ["email", "tokenHash", "expiresAt", "attempts", "verified"]
+    },
+    "ExchangeConnection": {
+      "title": "ExchangeConnection",
+      "description": "Secure encrypted crypto exchange connector details.",
+      "type": "object",
+      "properties": {
+        "exchangeId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "exchangeName": {
+          "type": "string"
+        },
+        "apiKey": {
+          "type": "string"
+        },
+        "encryptedSecret": {
+          "type": "string"
+        },
+        "isConnected": {
+          "type": "boolean"
+        },
+        "tradingEnabled": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": ["exchangeId", "userId", "exchangeName", "apiKey", "encryptedSecret", "isConnected", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Comprehensive user-specific clearance records."
+    },
+    "/otp_verifications/{userId}": {
+      "schema": "OtpVerification",
+      "description": "Secure registration email verification records."
+    },
+    "/password_resets/{email}": {
+      "schema": "PasswordReset",
+      "description": "Secure password reset records mapped by target email."
+    },
+    "/exchanges/{exchangeId}": {
+      "schema": "ExchangeConnection",
+      "description": "Secure exchange credentials mapped by connection ID."
+    }
+  }
+}
