@@ -159,6 +159,79 @@
         }
       },
       "required": ["exchangeId", "userId", "exchangeName", "apiKey", "encryptedSecret", "isConnected", "createdAt", "updatedAt"]
+    },
+    "BotApiKey": {
+      "title": "BotApiKey",
+      "description": "User custom NovaQuant Bot API Key and Webhook authentication record.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "apiKey": {
+          "type": "string"
+        },
+        "apiSecret": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "lastUsed": {
+          "type": "string"
+        }
+      },
+      "required": ["userId", "apiKey", "isActive", "createdAt"]
+    },
+    "TradeRecord": {
+      "title": "TradeRecord",
+      "description": "Executed bot and webhook trade order details.",
+      "type": "object",
+      "properties": {
+        "tradeId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "side": {
+          "type": "string"
+        },
+        "entryPrice": {
+          "type": "number"
+        },
+        "exitPrice": {
+          "type": "number"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "profit": {
+          "type": "number"
+        },
+        "profitPercent": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        }
+      },
+      "required": ["tradeId", "userId", "symbol", "side", "quantity", "status", "timestamp"]
     }
   },
   "firestore": {
@@ -177,6 +250,14 @@
     "/exchanges/{exchangeId}": {
       "schema": "ExchangeConnection",
       "description": "Secure exchange credentials mapped by connection ID."
+    },
+    "/bot_api_keys/{apiKey}": {
+      "schema": "BotApiKey",
+      "description": "User Bot API Key and Webhook authentication records."
+    },
+    "/trades/{tradeId}": {
+      "schema": "TradeRecord",
+      "description": "User executed trading history records."
     }
   }
 }

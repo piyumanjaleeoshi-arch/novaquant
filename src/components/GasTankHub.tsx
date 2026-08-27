@@ -61,7 +61,7 @@ export default function GasTankHub({
 
   const [checkoutStep, setCheckoutStep] = useState<'details' | 'loading' | 'success'>('details');
   const [selectedWallet, setSelectedWallet] = useState<'Binance' | 'Bitget' | 'Bybit'>('Binance');
-  const [binancePayId, setBinancePayId] = useState('piyumanjaleeoshi@gmail.com');
+  const [binancePayId, setBinancePayId] = useState(activeWorkspace.emailAddress || 'pay@novaquant.io');
   const [referrerCode, setReferrerCode] = useState('');
   
   // Binance payment custom simulation states
@@ -294,7 +294,7 @@ export default function GasTankHub({
   const openCheckout = (packName: string, gasAmount: number, price: number) => {
     setPurchaseModal({ open: true, packName, gasAmount, price });
     setCheckoutStep('details');
-    setBinancePayId('piyumanjaleeoshi@gmail.com');
+    setBinancePayId(activeWorkspace.emailAddress || 'pay@novaquant.io');
     setSimulatedPin('');
     setQrScanned(false);
     setScanSpeed(false);
@@ -709,11 +709,11 @@ export default function GasTankHub({
                 <div className="bg-[#020617] border border-slate-850 p-2 rounded-lg font-mono text-[9px] text-left space-y-1">
                   <span className="text-slate-500 block uppercase font-bold text-[8px] tracking-wider">Your Dynamic Referral Link:</span>
                   <div className="flex gap-1.5 items-center justify-between text-slate-300">
-                    <span className="truncate select-all select-none">{window.location.origin}?ref={activeWorkspace.emailAddress || 'piyumanjaleeoshi@gmail.com'}</span>
+                    <span className="truncate select-all select-none">{window.location.origin}?ref={activeWorkspace.emailAddress || 'operator@novaquant.io'}</span>
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}?ref=${activeWorkspace.emailAddress || 'piyumanjaleeoshi@gmail.com'}`);
+                        navigator.clipboard.writeText(`${window.location.origin}?ref=${activeWorkspace.emailAddress || 'operator@novaquant.io'}`);
                         alert("Affiliate Referral Link copied to your clipboard!");
                       }}
                       className="p-1 px-2 text-[9px] bg-slate-800 rounded hover:bg-slate-700 text-sky-400 shrink-0 cursor-pointer border-0"
@@ -1868,8 +1868,11 @@ export default function GasTankHub({
                       </div>
                     </div>
 
-                    <div className="text-[10px] text-slate-400 font-mono italic text-center text-slate-500 leading-tight">
-                      *Security keys are simulated end-to-end inside the secure NovaQuant client container sandbox framework.
+                    <div className="text-[10px] text-slate-400 font-mono italic text-center text-slate-500 leading-tight space-y-1">
+                      <p>*Security keys are simulated end-to-end inside the secure NovaQuant client container sandbox framework.</p>
+                      <p className="not-italic text-[9.5px] text-slate-400">
+                        Billing & Payment Support: <a href="mailto:novaquant2026@gmail.com" className="text-amber-400 underline font-bold">novaquant2026@gmail.com</a>
+                      </p>
                     </div>
                   </div>
                 )}
@@ -1880,7 +1883,7 @@ export default function GasTankHub({
                     <span className="text-slate-500 block uppercase font-bold text-[8px]">ACTIVE INTRODUCER PARTNER CODES</span>
                     <input
                       type="text"
-                      placeholder="Enter Referrer ID Email (Ex: piyumanjaleeoshi@gmail.com)"
+                      placeholder="Enter Referrer ID Email (Ex: partner@novaquant.io)"
                       value={referrerCode}
                       onChange={e => setReferrerCode(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 px-2 py-1 text-sky-400 rounded focus:border-amber-400 outline-none mt-1 select-all font-semibold"

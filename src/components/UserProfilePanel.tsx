@@ -323,6 +323,41 @@ export default function UserProfilePanel({
                 </p>
               </div>
 
+              {/* Official App Support Email Information */}
+              <div className="border border-sky-900/40 p-3.5 rounded-lg bg-sky-950/20 space-y-2 font-sans">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></div>
+                    <span className="text-xs font-bold text-sky-300 font-mono uppercase tracking-wider">Official App Support & Inquiries</span>
+                  </div>
+                  <span className="text-[9px] bg-sky-900/60 text-sky-200 border border-sky-700/50 px-2 py-0.5 rounded font-mono font-bold">24/7 Priority Desk</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-normal">
+                  Need assistance with Binance API handshakes, Webhook signal dispatch, algorithm parameter tuning, or billing questions?
+                </p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 bg-slate-950/60 p-2.5 rounded-md border border-slate-900">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 font-mono">SUPPORT EMAIL:</span>
+                    <a 
+                      href="mailto:novaquant2026@gmail.com" 
+                      className="text-xs font-bold text-yellow-400 hover:text-yellow-300 underline font-mono select-all transition-colors"
+                    >
+                      novaquant2026@gmail.com
+                    </a>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText('novaquant2026@gmail.com');
+                      alert('Support email (novaquant2026@gmail.com) copied to clipboard!');
+                    }}
+                    className="px-2.5 py-1 text-[10px] font-mono font-bold bg-slate-800 hover:bg-slate-700 text-sky-300 rounded border border-slate-700 cursor-pointer transition-all self-start sm:self-auto"
+                  >
+                    Copy Email
+                  </button>
+                </div>
+              </div>
+
               <div className="pt-3 flex justify-end">
                 <button
                   type="button"

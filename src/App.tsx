@@ -46,8 +46,12 @@ import AccuracyDbAnalyzer, { generateSmartAnalysis } from './components/Accuracy
 import ExchangeWallets from './components/ExchangeWallets';
 import UserProfilePanel from './components/UserProfilePanel';
 import AICopilotAnalyzer from './components/AICopilotAnalyzer';
+import BotApiWebhookHub from './components/BotApiWebhookHub';
+import UserTradeHistory from './components/UserTradeHistory';
 
 import {
+  KeyRound,
+  Layers,
   Sparkles,
   Brain,
   Bot,
@@ -232,8 +236,8 @@ const SEED_GAS_TRANSACTIONS: GasTransaction[] = [
 const SEED_SAAS_USERS: SaaSUser[] = [
   {
     id: 'usr-1',
-    email: 'piyumanjaleeoshi@gmail.com',
-    name: 'Oshi Piyumanjalee',
+    email: 'admin@novaquant.io',
+    name: 'Chief Systems Admin',
     authProvider: 'GOOGLE',
     joinedDate: 'June 01, 2026',
     workspacesCount: 1,
@@ -281,7 +285,7 @@ const SEED_AUDIT_LOGS: AuditLog[] = [
   {
     id: 'audit-1',
     timestamp: '07:40:11 AM',
-    actor: 'Oshi Piyumanjalee',
+    actor: 'Systems Operator',
     action: 'Developer console session authorized via OAuth2 Google Cloud API',
     ipAddress: '116.14.99.12',
     severity: 'INFO'
@@ -327,7 +331,6 @@ export default function App() {
 
   const isAdmin = !!(
     currentUser?.role === 'ADMIN' || 
-    currentUser?.email?.toLowerCase() === 'piyumanjaleeoshi@gmail.com' ||
     currentUser?.email?.toLowerCase() === 'novaquant2026@gmail.com' ||
     currentUser?.email?.toLowerCase() === 'salindaperera1997@gmail.com' ||
     currentUser?.email?.toLowerCase().startsWith('admin') ||
@@ -345,7 +348,6 @@ export default function App() {
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
             const role = userData.role || (
-              firebaseUser.email?.toLowerCase() === 'piyumanjaleeoshi@gmail.com' ||
               firebaseUser.email?.toLowerCase() === 'novaquant2026@gmail.com' ||
               firebaseUser.email?.toLowerCase() === 'salindaperera1997@gmail.com' ||
               firebaseUser.email?.toLowerCase().startsWith('admin') ||
@@ -367,7 +369,6 @@ export default function App() {
           } else {
             // Document not found in Firestore yet, build fallback
             const role = (
-              firebaseUser.email?.toLowerCase() === 'piyumanjaleeoshi@gmail.com' ||
               firebaseUser.email?.toLowerCase() === 'novaquant2026@gmail.com' ||
               firebaseUser.email?.toLowerCase() === 'salindaperera1997@gmail.com' ||
               firebaseUser.email?.toLowerCase().startsWith('admin') ||
@@ -394,7 +395,6 @@ export default function App() {
               setCurrentUser(JSON.parse(cached));
             } catch {
               const role = (
-                firebaseUser.email?.toLowerCase() === 'piyumanjaleeoshi@gmail.com' ||
                 firebaseUser.email?.toLowerCase() === 'novaquant2026@gmail.com' ||
                 firebaseUser.email?.toLowerCase() === 'salindaperera1997@gmail.com' ||
                 firebaseUser.email?.toLowerCase().startsWith('admin') ||
@@ -411,7 +411,6 @@ export default function App() {
             }
           } else {
             const role = (
-              firebaseUser.email?.toLowerCase() === 'piyumanjaleeoshi@gmail.com' ||
               firebaseUser.email?.toLowerCase() === 'novaquant2026@gmail.com' ||
               firebaseUser.email?.toLowerCase() === 'salindaperera1997@gmail.com' ||
               firebaseUser.email?.toLowerCase().startsWith('admin') ||
@@ -493,7 +492,7 @@ export default function App() {
         telegramChatId: '',
         telegramToken: '',
         emailAlertsEnabled: false,
-        emailAddress: 'piyumanjaleeoshi@gmail.com',
+        emailAddress: 'operator@novaquant.io',
         isLive: true,
         riskPerTrade: 1.5,
         gasBalance: 100.0000,
@@ -2802,6 +2801,30 @@ export default function App() {
           </button>
 
           <button
+            onClick={() => setActiveTab('botapi')}
+            className={`px-3 py-1.5 rounded-md flex items-center gap-2 transition-all cursor-pointer font-sans border-0 ${
+              activeTab === 'botapi'
+                ? 'bg-sky-950/80 text-sky-300 shadow-sm border border-sky-800/50'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            id="nav-bot-api-btn"
+          >
+            <KeyRound className="h-4 w-4 text-sky-400" /> BOT API & WEBHOOKS
+          </button>
+
+          <button
+            onClick={() => setActiveTab('tradeledger')}
+            className={`px-3 py-1.5 rounded-md flex items-center gap-2 transition-all cursor-pointer font-sans border-0 ${
+              activeTab === 'tradeledger'
+                ? 'bg-slate-800 text-emerald-300 shadow-sm border border-emerald-900/40'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            id="nav-trade-ledger-btn"
+          >
+            <Layers className="h-4 w-4 text-emerald-400" /> TRADE LEDGER
+          </button>
+
+          <button
             onClick={() => setActiveTab('gas')}
             className={`px-3 py-1.5 rounded-md flex items-center gap-2 transition-all cursor-pointer font-sans border-0 ${
               activeTab === 'gas'
@@ -2889,31 +2912,6 @@ export default function App() {
             {/* Tabs Rendering logic */}
             {activeTab === 'dashboard' && (
               <div className="flex flex-col gap-6 w-full">
-                {currentUser && binanceConnectionStatus !== 'CONNECTED' && (
-                  <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-indigo-500/10 border border-amber-500/20 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 backdrop-blur-sm animate-fade-in" id="binance-onboarding-banner">
-                    <div className="space-y-2 text-center md:text-left">
-                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 text-xs font-mono border border-amber-500/20">
-                        <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                        ONBOARDING SETUP REQUIRED
-                      </div>
-                      <h2 className="text-xl font-sans font-semibold tracking-tight text-white">
-                        Connect your Binance API key to start trading
-                      </h2>
-                      <p className="text-slate-400 text-sm max-w-xl">
-                        To activate live executions, trade tracking, and autopilot bot, configure your secure, encrypted Binance Futures API key in your secure personal database workspace.
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setActiveTab('wallets')}
-                      className="px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-sans font-semibold rounded-lg hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/15 text-sm shrink-0 flex items-center gap-2 cursor-pointer"
-                      id="onboarding-connect-btn"
-                    >
-                      <Wallet className="h-4 w-4" />
-                      Connect Exchange Wallet
-                    </button>
-                  </div>
-                )}
-
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" id="dashboard-layout-modules">
                 
                 {/* Left (8 Columns) */}
@@ -4235,6 +4233,26 @@ resource "google_compute_router_nat" "nat" {
                 setRiskMode={setRiskMode}
                 onAddLog={handleAddLog}
                 gasBalance={displayedGasBalance}
+              />
+            )}
+
+            {/* NovaQuant Bot API & Webhook Hub */}
+            {activeTab === 'botapi' && (
+              <BotApiWebhookHub
+                activeWorkspace={activeWorkspace}
+                onAddLog={handleAddLog}
+                binanceConnected={binanceConnectionStatus === 'CONNECTED'}
+                binanceBalance={displayWalletBalance}
+                isTestnet={useBinanceTestnet}
+                onNavigateToWallets={() => setActiveTab('wallets')}
+              />
+            )}
+
+            {/* User Trade History Ledger */}
+            {activeTab === 'tradeledger' && (
+              <UserTradeHistory
+                activeWorkspace={activeWorkspace}
+                onAddLog={handleAddLog}
               />
             )}
 

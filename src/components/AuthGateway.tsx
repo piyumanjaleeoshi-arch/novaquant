@@ -73,8 +73,9 @@ export default function AuthGateway({ onLoginSuccess, initialMode, initialEmail 
     setSuccessMessage("⚡ Developer Sandbox clearance granted! Bypassing Cloud Authentication...");
     setTimeout(() => {
       const emailLower = bypassEmail.toLowerCase();
-      const isAdminEmail = emailLower === 'piyumanjaleeoshi@gmail.com' || 
-                           emailLower === 'novaquant2026@gmail.com';
+      const isAdminEmail = emailLower === 'novaquant2026@gmail.com' ||
+                           emailLower.startsWith('admin') ||
+                           emailLower.includes('admin@');
       onLoginSuccess({
         email: bypassEmail,
         name: bypassName,
@@ -422,8 +423,9 @@ export default function AuthGateway({ onLoginSuccess, initialMode, initialEmail 
         setSuccessMessage("⚡ Firebase Auth not configured. Launching Developer Sandbox bypass...");
         setTimeout(() => {
           const emailLower = email.toLowerCase().trim();
-          const isAdminEmail = emailLower === 'piyumanjaleeoshi@gmail.com' || 
-                               emailLower === 'novaquant2026@gmail.com';
+          const isAdminEmail = emailLower === 'novaquant2026@gmail.com' ||
+                               emailLower.startsWith('admin') ||
+                               emailLower.includes('admin@');
           onLoginSuccess({
             email: email,
             name: email.split('@')[0] || 'Operator',
@@ -585,8 +587,9 @@ export default function AuthGateway({ onLoginSuccess, initialMode, initialEmail 
         setSuccessMessage("⚡ Firebase Auth not configured. Launching Developer Sandbox bypass...");
         setTimeout(() => {
           const emailLower = signUpEmail.toLowerCase().trim();
-          const isAdminEmail = emailLower === 'piyumanjaleeoshi@gmail.com' || 
-                               emailLower === 'novaquant2026@gmail.com';
+          const isAdminEmail = emailLower === 'novaquant2026@gmail.com' ||
+                               emailLower.startsWith('admin') ||
+                               emailLower.includes('admin@');
           onLoginSuccess({
             email: signUpEmail,
             name: signUpName || 'Operator',
@@ -869,8 +872,9 @@ export default function AuthGateway({ onLoginSuccess, initialMode, initialEmail 
         setSuccessMessage("⚡ Developer Sandbox bypass: Recovery link simulated. Loading platform...");
         setTimeout(() => {
           const emailLower = forgotEmail.toLowerCase().trim();
-          const isAdminEmail = emailLower === 'piyumanjaleeoshi@gmail.com' || 
-                               emailLower === 'novaquant2026@gmail.com';
+          const isAdminEmail = emailLower === 'novaquant2026@gmail.com' ||
+                               emailLower.startsWith('admin') ||
+                               emailLower.includes('admin@');
           onLoginSuccess({
             email: forgotEmail,
             name: forgotEmail.split('@')[0] || 'Operator',
@@ -1118,10 +1122,10 @@ export default function AuthGateway({ onLoginSuccess, initialMode, initialEmail 
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDeveloperBypass('piyumanjaleeoshi@gmail.com', 'Oshi Piyumanjalee')}
+                      onClick={() => handleDeveloperBypass('admin@novaquant.io', 'Platform Administrator')}
                       className="bg-slate-900 hover:bg-slate-800 border border-slate-700 active:scale-95 text-slate-100 font-bold px-3 py-1.5 rounded text-[10px] uppercase transition-all flex items-center justify-center gap-1 cursor-pointer w-full text-center"
                     >
-                      Bypass as Oshi Admin (piyumanjaleeoshi@gmail.com)
+                      Bypass as Platform Admin (admin@novaquant.io)
                     </button>
                     <button
                       type="button"

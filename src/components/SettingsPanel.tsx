@@ -520,11 +520,23 @@ export default function SettingsPanel({
 
       </div>
 
-      {/* Button Save */}
-      <div className="flex justify-end pt-2">
+      {/* Support and Save Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-slate-900">
+        <div className="flex items-center gap-2 text-xs text-slate-400 font-sans">
+          <span className="text-slate-500 font-mono text-[10px]">APP SUPPORT:</span>
+          <a 
+            href="mailto:novaquant2026@gmail.com" 
+            className="text-yellow-400 hover:text-yellow-300 underline font-mono font-bold"
+          >
+            novaquant2026@gmail.com
+          </a>
+          <span className="text-[10px] text-slate-600">|</span>
+          <span className="text-[10px] text-slate-500">24/7 Algorithmic & Infrastructure Support</span>
+        </div>
+
         <button
           onClick={handleSave}
-          className="bg-[#32b2e8] hover:bg-[#209ccd] text-slate-950 font-sans text-xs font-bold py-2.5 px-6 rounded-lg shadow-lg active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer border-0"
+          className="bg-[#32b2e8] hover:bg-[#209ccd] text-slate-950 font-sans text-xs font-bold py-2.5 px-6 rounded-lg shadow-lg active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer border-0 w-full sm:w-auto justify-center"
           id="save-settings-btn"
         >
           <Save className="h-4 w-4" /> Save Configuration Parameters

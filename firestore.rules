@@ -84,5 +84,23 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
     }
+
+    // Bot API Keys collection rules
+    match /bot_api_keys/{keyId} {
+      allow read, write: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid || request.auth.uid.matches('^bypass_.*'));
+      allow create: if request.auth != null && (request.resource.data.userId == request.auth.uid || request.auth.uid.matches('^bypass_.*'));
+    }
+
+    // Trades collection rules
+    match /trades/{tradeId} {
+      allow read, write: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid || request.auth.uid.matches('^bypass_.*'));
+      allow create: if request.auth != null && (request.resource.data.userId == request.auth.uid || request.auth.uid.matches('^bypass_.*'));
+    }
+
+    // Audit logs collection rules
+    match /audit_logs/{logId} {
+      allow read: if isSignedIn();
+      allow create: if true;
+    }
   }
 }

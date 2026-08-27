@@ -45,8 +45,8 @@ export default function ClientAcquisitionHub({
   const [activeSegment, setActiveSegment] = useState<'INVITE' | 'SANDBOX'>('INVITE');
 
   // Invitation Form States
-  const [prospectName, setProspectName] = useState('Oshi Piyumanjalee');
-  const [prospectEmail, setProspectEmail] = useState('piyumanjaleeoshi@gmail.com');
+  const [prospectName, setProspectName] = useState('Marcus Vance');
+  const [prospectEmail, setProspectEmail] = useState('marcus.vance@fund.io');
   const [targetTier, setTargetTier] = useState<SubscriptionTier>('BASIC');
   const [gcpProject, setGcpProject] = useState(gcpProjectNumber);
   const [generatedUrl, setGeneratedUrl] = useState('');
@@ -55,8 +55,8 @@ export default function ClientAcquisitionHub({
 
   // Billing & Stripe Sandbox Form States
   const [selectedExchange, setSelectedExchange] = useState<string>('Binance');
-  const [clientBillingName, setClientBillingName] = useState('Oshi Piyumanjalee');
-  const [clientBillingEmail, setClientBillingEmail] = useState('piyumanjaleeoshi@gmail.com');
+  const [clientBillingName, setClientBillingName] = useState('Marcus Vance');
+  const [clientBillingEmail, setClientBillingEmail] = useState('marcus.vance@fund.io');
   const [sandboxTier, setSandboxTier] = useState<SubscriptionTier>('BASIC');
   const [clientGcpProject, setClientGcpProject] = useState(gcpProjectNumber);
   const [binanceKey, setBinanceKey] = useState('d1A2v489Xm92p10Ks9Xq39...');
@@ -257,7 +257,7 @@ export default function ClientAcquisitionHub({
                   value={prospectName}
                   onChange={(e) => setProspectName(e.target.value)}
                   className="w-full bg-[#020617] border border-slate-850 text-white text-[11px] rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
-                  placeholder="E.g. Oshi Piyumanjalee"
+                  placeholder="E.g. Marcus Vance"
                 />
               </div>
 
@@ -268,7 +268,7 @@ export default function ClientAcquisitionHub({
                   value={prospectEmail}
                   onChange={(e) => setProspectEmail(e.target.value)}
                   className="w-full bg-[#020617] border border-slate-850 text-white text-[11px] rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
-                  placeholder="E.g. piyumanjaleeoshi@gmail.com"
+                  placeholder="E.g. client@enterprise.com"
                 />
               </div>
 
@@ -524,7 +524,7 @@ export default function ClientAcquisitionHub({
                       value={cardNumber}
                       onChange={(e) => setCardNumber(e.target.value)}
                       className="w-full bg-[#020617] border border-slate-850 text-white text-[11px] rounded px-2.5 py-1.5 focus:outline-none focus:border-yellow-500 font-mono tracking-wide"
-                      placeholder="e.g. piyumanjaleeoshi@gmail.com"
+                      placeholder="e.g. client@binance.com"
                     />
                   </div>
                   <div className="space-y-1">
