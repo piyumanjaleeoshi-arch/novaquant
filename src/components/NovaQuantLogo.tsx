@@ -1,6 +1,6 @@
 import React from 'react';
 // @ts-ignore
-import logoUrl from '../assets/images/novaquant_logo_1780893276213.png';
+import logoUrl from '../assets/images/novaquant_logo_1785219198239.jpg';
 
 interface NovaQuantLogoProps {
   className?: string;

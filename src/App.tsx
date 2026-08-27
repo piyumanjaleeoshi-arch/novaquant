@@ -583,7 +583,7 @@ export default function App() {
   const [apiKeyInput, setApiKeyInput] = useState<string>('');
   const [apiSecretInput, setApiSecretInput] = useState<string>('');
   const [showSecretKey, setShowSecretKey] = useState<boolean>(false);
-  const [useBinanceTestnet, setUseBinanceTestnet] = useState<boolean>(true);
+  const [useBinanceTestnet, setUseBinanceTestnet] = useState<boolean>(false);
   const [lastSyncTimestamp, setLastSyncTimestamp] = useState<string>('');
   const [maxRiskPerTrade, setMaxRiskPerTrade] = useState<number>(2);
   const [maxDailyLoss, setMaxDailyLoss] = useState<number>(5);
@@ -1403,104 +1403,100 @@ export default function App() {
 
       // ----------------- DUAL AI INTEGRATION LAYER -----------------
       if (config.aiTradingEnabled) {
-        if (!useBinanceTestnet) {
-          handleAddLog(`⚠️ DUAL-AI ANALYSIS BYPASSED: AI trade analysis is restricted to Binance Futures Testnet mode by default for safety. Proceeding with standard execution.`, 'warn');
-        } else {
-          handleAddLog(`🧠 DUAL-AI ANALYSIS TRIGGERED: Evaluating ${symbol} trend via Gemini & Claude double-engine...`, 'info');
-          try {
-            const token = await getAuthToken();
-            const recentCandles = analyzedCandles.slice(Math.max(0, currentIdx - 4), currentIdx + 1);
-            const klineData = recentCandles.map(c => ({
-              time: c.time,
-              open: c.open,
-              high: c.high,
-              low: c.low,
-              close: c.close,
-              volume: c.volume
-            }));
+        handleAddLog(`🧠 DUAL-AI ANALYSIS TRIGGERED: Evaluating ${symbol} trend via Gemini & Claude double-engine...`, 'info');
+        try {
+          const token = await getAuthToken();
+          const recentCandles = analyzedCandles.slice(Math.max(0, currentIdx - 4), currentIdx + 1);
+          const klineData = recentCandles.map(c => ({
+            time: c.time,
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close,
+            volume: c.volume
+          }));
 
-            const indicatorData = {
-              emaShort: config.emaShort,
-              emaLong: config.emaLong,
-              rsiPeriod: config.rsiPeriod,
-              rsi: currentCandle.rsi,
-              ema9: currentCandle.ema9,
-              ema21: currentCandle.ema21,
-              atr: currentCandle.atr,
-              rsiBuyThreshold: config.rsiBuyThreshold,
-              rsiSellThreshold: config.rsiSellThreshold,
-              confidenceThreshold: config.aiConfidenceThreshold || 70
-            };
+          const indicatorData = {
+            emaShort: config.emaShort,
+            emaLong: config.emaLong,
+            rsiPeriod: config.rsiPeriod,
+            rsi: currentCandle.rsi,
+            ema9: currentCandle.ema9,
+            ema21: currentCandle.ema21,
+            atr: currentCandle.atr,
+            rsiBuyThreshold: config.rsiBuyThreshold,
+            rsiSellThreshold: config.rsiSellThreshold,
+            confidenceThreshold: config.aiConfidenceThreshold || 70
+          };
 
-            const aiResponse = await fetch('/api/ai/trade-signal', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token ? `Bearer ${token}` : ''
-              },
-              body: JSON.stringify({
-                symbol: symbol,
-                klineData: klineData,
-                indicatorData: indicatorData
-              })
-            });
+          const aiResponse = await fetch('/api/ai/trade-signal', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': token ? `Bearer ${token}` : ''
+            },
+            body: JSON.stringify({
+              symbol: symbol,
+              klineData: klineData,
+              indicatorData: indicatorData
+            })
+          });
 
-            if (!aiResponse.ok) {
-              throw new Error(`AI Signal API returned status ${aiResponse.status}`);
-            }
-
-            const aiData = await aiResponse.json();
-            if (aiData.success) {
-              handleAddLog(`🤖 GEMINI DECISION: Bias = ${aiData.gemini.bias}, Confidence = ${aiData.gemini.confidence}%, Reason: "${aiData.gemini.reasoning}"`, 'info');
-              handleAddLog(`🎭 CLAUDE DECISION: Bias = ${aiData.claude.bias}, Confidence = ${aiData.claude.confidence}%, Reason: "${aiData.claude.reasoning}"`, 'info');
-              handleAddLog(`🔍 CONSENSUS STATUS: ${aiData.msg}`, aiData.actionable ? 'success' : 'warn');
-
-              // Append to audit logs state
-              const newAuditLog: AuditLog = {
-                id: `audit-ai-signal-${Date.now()}`,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-                actor: 'NovaQuant AI',
-                action: `Dual-AI check: ${symbol} (${triggered}). Gemini: ${aiData.gemini.bias} (${aiData.gemini.confidence}%), Claude: ${aiData.claude.bias} (${aiData.claude.confidence}%). Actionable: ${aiData.actionable ? 'YES' : 'NO'}`,
-                ipAddress: '127.0.0.1',
-                severity: aiData.actionable ? 'INFO' : 'WARN'
-              };
-              setAuditLogs(prev => [newAuditLog, ...prev]);
-
-              if (!aiData.actionable) {
-                handleAddLog(`🛑 AI TRADE BLOCK: Dual-AI double-engine did not reach actionable consensus (required both to agree and be >= ${config.aiConfidenceThreshold || 70}% confidence).`, 'warn');
-                return;
-              }
-
-              if (aiData.finalSignal !== triggered) {
-                handleAddLog(`🛑 AI TRADE BLOCK: AI consensus direction (${aiData.finalSignal}) mismatch with technical indicator trigger (${triggered}).`, 'warn');
-                return;
-              }
-
-              const isManualMode = config.aiTradingMode !== 'AUTOMATIC';
-              if (isManualMode) {
-                handleAddLog(`💡 AI TRADE RECOMMENDATION QUEUED: Manual operator confirmation required for ${symbol} ${triggered}.`, 'info');
-                setAiTradeRecommendation({
-                  symbol,
-                  side: triggered,
-                  quantity: cleanQty,
-                  entryPrice,
-                  stopTarget,
-                  profitTarget,
-                  costPerTrade,
-                  gemini: aiData.gemini,
-                  claude: aiData.claude,
-                  reason: aiData.gemini.reasoning
-                });
-                return;
-              } else {
-                handleAddLog(`⚡ AUTO-EXECUTION ENGAGED: Executing fully automatic AI-Consensus trade on ${symbol} ${triggered}...`, 'success');
-              }
-            } else {
-              handleAddLog(`⚠️ DUAL-AI FAULT: API succeeded but indicated failure. Proceeding with standard technical order execution...`, 'warn');
-            }
-          } catch (err: any) {
-            handleAddLog(`⚠️ DUAL-AI ENGINE OFFLINE: Failed to query dual-AI signal: ${err.message}. Proceeding with standard technical order execution...`, 'warn');
+          if (!aiResponse.ok) {
+            throw new Error(`AI Signal API returned status ${aiResponse.status}`);
           }
+
+          const aiData = await aiResponse.json();
+          if (aiData.success) {
+            handleAddLog(`🤖 GEMINI DECISION: Bias = ${aiData.gemini.bias}, Confidence = ${aiData.gemini.confidence}%, Reason: "${aiData.gemini.reasoning}"`, 'info');
+            handleAddLog(`🎭 CLAUDE DECISION: Bias = ${aiData.claude.bias}, Confidence = ${aiData.claude.confidence}%, Reason: "${aiData.claude.reasoning}"`, 'info');
+            handleAddLog(`🔍 CONSENSUS STATUS: ${aiData.msg}`, aiData.actionable ? 'success' : 'warn');
+
+            // Append to audit logs state
+            const newAuditLog: AuditLog = {
+              id: `audit-ai-signal-${Date.now()}`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+              actor: 'NovaQuant AI',
+              action: `Dual-AI check: ${symbol} (${triggered}). Gemini: ${aiData.gemini.bias} (${aiData.gemini.confidence}%), Claude: ${aiData.claude.bias} (${aiData.claude.confidence}%). Actionable: ${aiData.actionable ? 'YES' : 'NO'}`,
+              ipAddress: '127.0.0.1',
+              severity: aiData.actionable ? 'INFO' : 'WARN'
+            };
+            setAuditLogs(prev => [newAuditLog, ...prev]);
+
+            if (!aiData.actionable) {
+              handleAddLog(`🛑 AI TRADE BLOCK: Dual-AI double-engine did not reach actionable consensus (required both to agree and be >= ${config.aiConfidenceThreshold || 70}% confidence).`, 'warn');
+              return;
+            }
+
+            if (aiData.finalSignal !== triggered) {
+              handleAddLog(`🛑 AI TRADE BLOCK: AI consensus direction (${aiData.finalSignal}) mismatch with technical indicator trigger (${triggered}).`, 'warn');
+              return;
+            }
+
+            const isManualMode = config.aiTradingMode !== 'AUTOMATIC';
+            if (isManualMode) {
+              handleAddLog(`💡 AI TRADE RECOMMENDATION QUEUED: Manual operator confirmation required for ${symbol} ${triggered}.`, 'info');
+              setAiTradeRecommendation({
+                symbol,
+                side: triggered,
+                quantity: cleanQty,
+                entryPrice,
+                stopTarget,
+                profitTarget,
+                costPerTrade,
+                gemini: aiData.gemini,
+                claude: aiData.claude,
+                reason: aiData.gemini.reasoning
+              });
+              return;
+            } else {
+              handleAddLog(`⚡ AUTO-EXECUTION ENGAGED: Executing fully automatic AI-Consensus trade on ${symbol} ${triggered}...`, 'success');
+            }
+          } else {
+            handleAddLog(`⚠️ DUAL-AI FAULT: API succeeded but indicated failure. Proceeding with standard technical order execution...`, 'warn');
+          }
+        } catch (err: any) {
+          handleAddLog(`⚠️ DUAL-AI ENGINE OFFLINE: Failed to query dual-AI signal: ${err.message}. Proceeding with standard technical order execution...`, 'warn');
         }
       }
       // -------------------------------------------------------------
@@ -1964,7 +1960,7 @@ export default function App() {
             setBinanceConnectionStatus('CONNECTED');
             setApiKeyInput(data.apiKey || '');
             setApiSecretInput('');
-            setUseBinanceTestnet(data.isTestnet);
+            setUseBinanceTestnet(false);
             setLastSyncTimestamp(data.updatedAt ? new Date(data.updatedAt).toLocaleString() : new Date().toLocaleString());
             if (data.riskSettings) {
               setMaxRiskPerTrade(data.riskSettings.maxRiskPerTrade ?? 2);
@@ -2892,7 +2888,33 @@ export default function App() {
           <>
             {/* Tabs Rendering logic */}
             {activeTab === 'dashboard' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" id="dashboard-layout-modules">
+              <div className="flex flex-col gap-6 w-full">
+                {currentUser && binanceConnectionStatus !== 'CONNECTED' && (
+                  <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-indigo-500/10 border border-amber-500/20 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 backdrop-blur-sm animate-fade-in" id="binance-onboarding-banner">
+                    <div className="space-y-2 text-center md:text-left">
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 text-xs font-mono border border-amber-500/20">
+                        <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                        ONBOARDING SETUP REQUIRED
+                      </div>
+                      <h2 className="text-xl font-sans font-semibold tracking-tight text-white">
+                        Connect your Binance API key to start trading
+                      </h2>
+                      <p className="text-slate-400 text-sm max-w-xl">
+                        To activate live executions, trade tracking, and autopilot bot, configure your secure, encrypted Binance Futures API key in your secure personal database workspace.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('wallets')}
+                      className="px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-sans font-semibold rounded-lg hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/15 text-sm shrink-0 flex items-center gap-2 cursor-pointer"
+                      id="onboarding-connect-btn"
+                    >
+                      <Wallet className="h-4 w-4" />
+                      Connect Exchange Wallet
+                    </button>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" id="dashboard-layout-modules">
                 
                 {/* Left (8 Columns) */}
                 <div className="lg:col-span-8 space-y-6 flex flex-col justify-start">
@@ -3203,6 +3225,7 @@ export default function App() {
                 </div>
 
               </div>
+              </div>
             )}
 
             {activeTab === 'pnl' && (
@@ -3405,13 +3428,11 @@ export default function App() {
                               {/* Step 1 */}
                               <div className="bg-slate-950/60 border border-slate-900 rounded p-2.5 space-y-1">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] font-extrabold bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">STEP 1</span>
-                                  <span className="font-bold text-[11px] text-slate-200">Align Environment Modes</span>
+                                  <span className="text-[10px] font-extrabold bg-[#fbbf24]/20 text-[#fbbf24] px-1.5 py-0.5 rounded">STEP 1</span>
+                                  <span className="font-bold text-[11px] text-slate-200">Enforce Live Environment Mode</span>
                                 </div>
                                 <p className="text-[10px] text-slate-400 leading-normal">
-                                  Make sure your <strong>Environment Mode</strong> selection matches your keys. 
-                                  If your keys are from <strong>testnet.binancefuture.com</strong>, choose <em>Binance Futures Testnet</em>. 
-                                  If they are from <strong>binance.com</strong>, choose <em>Binance Live (Production)</em>.
+                                  Only NovaQuant authorized live Binance accounts are supported. Make sure your API key and Secret are from your live <strong>binance.com</strong> account.
                                 </p>
                               </div>
 
@@ -3484,13 +3505,11 @@ export default function App() {
                           <div className="space-y-1">
                             <label className="sleek-label block text-[9.5px] text-slate-400 font-sans">Environment Mode</label>
                             <select 
-                              disabled={binanceConnectionStatus === 'CONNECTED'}
-                              value={useBinanceTestnet ? "testnet" : "live"}
-                              onChange={(e) => setUseBinanceTestnet(e.target.value === "testnet")}
-                              className="w-full bg-slate-950 border border-slate-850 text-[#fbbf24] font-semibold text-xs rounded px-2.5 py-1.5 focus:outline-none focus:border-[#fbbf24] disabled:opacity-60"
+                              disabled={true}
+                              value="live"
+                              className="w-full bg-slate-950 border border-slate-850 text-[#fbbf24] font-semibold text-xs rounded px-2.5 py-1.5 focus:outline-none disabled:opacity-80"
                             >
                               <option value="live" className="text-amber-400">Binance Live (Production)</option>
-                              <option value="testnet" className="text-blue-400">Binance Futures Testnet (Sandbox)</option>
                             </select>
                           </div>
 

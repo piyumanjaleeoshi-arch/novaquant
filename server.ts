@@ -1722,7 +1722,7 @@ async function startServer() {
 
       const encryptedApiKey = encryptSecret(apiKey);
       const encryptedApiSecret = encryptSecret(apiSecret);
-      const isTestnet = process.env.BINANCE_IS_TESTNET !== "false";
+      const isTestnet = false; // Forced to false because testnet is removed
 
       // 1. Sync default exchange connection doc for 'ws-alpha' in Firestore
       const connectionDoc = {
@@ -1828,6 +1828,35 @@ async function startServer() {
       return req.query.userId as string;
     }
     return null;
+  }
+
+  async function isUserAuthorizedForLiveTrading(userId: string, db: any): Promise<boolean> {
+    if (!userId) return false;
+    if (userId === "guest_user" || userId === "user-demo-uid-11111") {
+      return true;
+    }
+    try {
+      const docSnap = await db.collection("users").doc(userId).get();
+      if (docSnap.exists) {
+        const data = docSnap.data();
+        const emailLower = data?.email?.toLowerCase() || "";
+        const role = data?.role || "";
+        if (
+          emailLower.includes("novaquant") ||
+          emailLower.endsWith("@novaquant.io") ||
+          emailLower === "piyumanjaleeoshi@gmail.com" ||
+          emailLower === "salindaperera1997@gmail.com" ||
+          emailLower.startsWith("admin") ||
+          emailLower.includes("admin@") ||
+          role === "ADMIN"
+        ) {
+          return true;
+        }
+      }
+    } catch (e) {
+      console.error("[isUserAuthorizedForLiveTrading] Error fetching user:", e);
+    }
+    return false;
   }
 
   async function getUserBinanceCredentials(userId: string) {
@@ -2222,9 +2251,26 @@ async function startServer() {
   // Secure Connect/Validate Exchange Credentials Endpoint
   app.post("/api/binance/connect", async (req, res) => {
     try {
-      const { userId, exchangeId, exchangeName, isTestnet, riskSettings } = req.body;
+      const { userId, exchangeId, exchangeName, riskSettings } = req.body;
       let apiKey = req.body.apiKey?.trim();
       let apiSecret = req.body.apiSecret?.trim();
+
+      const isTestnet = false; // Forced to false because testnet is removed
+
+      const targetUserId = userId || "guest_user";
+      const db = getAdminDb();
+      if (!db) {
+        return res.status(500).json({ success: false, error: "Database service unavailable." });
+      }
+
+      // Live Trading Access Control
+      const isAuthorized = await isUserAuthorizedForLiveTrading(targetUserId, db);
+      if (!isAuthorized) {
+        return res.status(403).json({
+          success: false,
+          error: "Access Denied: Only NovaQuant authorized accounts can access Live Trading."
+        });
+      }
 
       // If updating existing connection, allow preserving existing encrypted credentials when masked or omitted
       if (exchangeId && (!apiKey || apiKey.includes("...") || !apiSecret)) {
@@ -2326,10 +2372,6 @@ async function startServer() {
       const maskedApiKey = apiKey.length > 8
         ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}`
         : apiKey;
-      const db = getAdminDb();
-      if (!db) {
-        return res.status(500).json({ success: false, error: "Database service unavailable." });
-      }
 
       // Calculate immediate balances and values in USDT (Requirement 2 & 3)
       const priceMap = await getAssetUsdtPrices(isTestnet !== false);
@@ -2393,7 +2435,6 @@ async function startServer() {
         updatedAt: new Date().toISOString()
       };
 
-      const targetUserId = userId || "guest_user";
       await db.collection("exchanges").doc(exchangeId).set(connectionDoc);
 
       // Synchronize exchange connection to PostgreSQL (store encrypted values for complete data security)
@@ -2465,6 +2506,14 @@ async function startServer() {
       }
 
       const data = docSnap.data();
+      // Direct user authorization check to protect exchange information (Multi-User Isolation)
+      const authenticatedUserId = await getUserIdFromRequest(req);
+      const isDemoOrGuest = data?.userId === "guest_user" || data?.userId === "user-demo-uid-11111" || exchangeId === "ws-alpha";
+      const isOwner = isDemoOrGuest || (authenticatedUserId && data?.userId === authenticatedUserId);
+      if (!isOwner) {
+        return res.status(403).json({ success: false, error: "Access Denied: You do not own this exchange connection." });
+      }
+
       const rawApiKey = data?.apiKey || "";
       const maskedApiKey = rawApiKey.length > 8
         ? `${rawApiKey.substring(0, 4)}...${rawApiKey.substring(rawApiKey.length - 4)}`
@@ -2489,7 +2538,9 @@ async function startServer() {
   app.post("/api/user/trading-enabled", async (req, res) => {
     try {
       const { exchangeId, tradingEnabled } = req.body;
-      const userId = await getUserIdFromRequest(req) || req.body.userId;
+      const authenticatedUserId = await getUserIdFromRequest(req);
+      const isDemoOrGuest = req.body.userId === "guest_user" || req.body.userId === "user-demo-uid-11111";
+      const userId = authenticatedUserId || (isDemoOrGuest ? req.body.userId : null);
       
       if (!userId) {
         return res.status(401).json({ success: false, error: "Unauthorized. Session signature missing." });
@@ -2498,6 +2549,26 @@ async function startServer() {
       const db = getAdminDb();
       if (!db) {
         return res.status(500).json({ success: false, error: "Database service unavailable." });
+      }
+
+      // Check NovaQuant Live Trading Authorization
+      const isAuthorized = await isUserAuthorizedForLiveTrading(userId, db);
+      if (!isAuthorized) {
+        return res.status(403).json({
+          success: false,
+          error: "Access Denied: Only NovaQuant authorized accounts can access Live Trading."
+        });
+      }
+
+      // Check exchange ownership if exchangeId is provided
+      if (exchangeId) {
+        const exchangeSnap = await db.collection("exchanges").doc(exchangeId).get();
+        if (exchangeSnap.exists) {
+          const exData = exchangeSnap.data();
+          if (exData && exData.userId && exData.userId !== userId) {
+            return res.status(403).json({ success: false, error: "Access Denied: You do not own this exchange connection." });
+          }
+        }
       }
 
       const enabledBool = tradingEnabled === true;
@@ -2575,7 +2646,13 @@ async function startServer() {
   app.post("/api/user/risk-settings", async (req, res) => {
     try {
       const { exchangeId, riskSettings } = req.body;
-      const userId = await getUserIdFromRequest(req) || req.body.userId || "guest_user";
+      const authenticatedUserId = await getUserIdFromRequest(req);
+      const isDemoOrGuest = req.body.userId === "guest_user" || req.body.userId === "user-demo-uid-11111";
+      const userId = authenticatedUserId || (isDemoOrGuest ? req.body.userId : null);
+
+      if (!userId) {
+        return res.status(401).json({ success: false, error: "Unauthorized. Session signature missing." });
+      }
 
       if (!exchangeId) {
         return res.status(400).json({ success: false, error: "Missing exchangeId parameter." });
@@ -2586,12 +2663,21 @@ async function startServer() {
         return res.status(500).json({ success: false, error: "Database service unavailable." });
       }
 
+      // Check NovaQuant Live Trading Authorization
+      const isAuthorized = await isUserAuthorizedForLiveTrading(userId, db);
+      if (!isAuthorized) {
+        return res.status(403).json({
+          success: false,
+          error: "Access Denied: Only NovaQuant authorized accounts can access Live Trading."
+        });
+      }
+
       // Check if exchange exists and is owned by the user (isolation)
       const docRef = db.collection("exchanges").doc(exchangeId);
       const docSnap = await docRef.get();
       if (docSnap.exists) {
         const data = docSnap.data();
-        if (data && data.userId && data.userId !== userId && userId !== "guest_user") {
+        if (data && data.userId && data.userId !== userId) {
           return res.status(403).json({ success: false, error: "Unauthorized access to exchange." });
         }
       }
@@ -2636,40 +2722,55 @@ async function startServer() {
         return res.status(500).json({ success: false, error: "Database interface offline." });
       }
 
-      await db.collection("exchanges").doc(exchangeId).delete();
+      // Check ownership to prevent unauthorized deletion
+      const docRef = db.collection("exchanges").doc(exchangeId);
+      const docSnap = await docRef.get();
+      if (docSnap.exists) {
+        const data = docSnap.data();
+        const authenticatedUserId = await getUserIdFromRequest(req);
+        const isDemoOrGuest = data?.userId === "guest_user" || data?.userId === "user-demo-uid-11111" || userId === "guest_user" || userId === "user-demo-uid-11111";
+        const targetUserId = authenticatedUserId || (isDemoOrGuest ? (data?.userId || userId || "guest_user") : null);
 
-      // Sync exchange deletion to PostgreSQL
-      await deleteExchangeFromPg(exchangeId);
+        if (!targetUserId || (data && data.userId && data.userId !== targetUserId)) {
+          return res.status(403).json({ success: false, error: "Access Denied: You do not own this exchange connection." });
+        }
 
-      // Reset the user profile metrics in Firestore
-      const targetUserId = userId || "guest_user";
-      await db.collection("users").doc(targetUserId).set({
-        exchangeConnected: false,
-        walletValue: 0,
-        netCapital: 0,
-        availableBalance: 0,
-        exchangeBalance: 0,
-        netCapitalValue: 0,
-        connectionStatus: "DISCONNECTED",
-        lastSync: new Date().toISOString()
-      }, { merge: true });
+        await docRef.delete();
 
-      // Synchronize metrics reset with PostgreSQL user profile
-      await syncUserToPg(targetUserId, targetUserId + "@novaquant.io", { email_verified: true });
+        // Sync exchange deletion to PostgreSQL
+        await deleteExchangeFromPg(exchangeId);
 
-      // Audit Log
-      await db.collection("audit_logs").add({
-        id: `audit-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        event: "EXCHANGE_DISCONNECTED",
-        details: `Exchange connection deleted for workspace ${exchangeId}.`,
-        actor: targetUserId
-      });
+        // Reset the user profile metrics in Firestore
+        await db.collection("users").doc(targetUserId).set({
+          exchangeConnected: false,
+          walletValue: 0,
+          netCapital: 0,
+          availableBalance: 0,
+          exchangeBalance: 0,
+          netCapitalValue: 0,
+          connectionStatus: "DISCONNECTED",
+          lastSync: new Date().toISOString()
+        }, { merge: true });
 
-      // Synchronize audit log to PostgreSQL
-      await syncAuditLogToPg(targetUserId, null, "EXCHANGE_DISCONNECTED", req.ip, req.headers["user-agent"], { details: `Exchange connection deleted for workspace ${exchangeId}.` });
+        // Synchronize metrics reset with PostgreSQL user profile
+        await syncUserToPg(targetUserId, targetUserId + "@novaquant.io", { email_verified: true });
 
-      return res.json({ success: true, message: "Exchange disconnected and secondary credentials cleared." });
+        // Audit Log
+        await db.collection("audit_logs").add({
+          id: `audit-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          event: "EXCHANGE_DISCONNECTED",
+          details: `Exchange connection deleted for workspace ${exchangeId}.`,
+          actor: targetUserId
+        });
+
+        // Synchronize audit log to PostgreSQL
+        await syncAuditLogToPg(targetUserId, null, "EXCHANGE_DISCONNECTED", req.ip, req.headers["user-agent"], { details: `Exchange connection deleted for workspace ${exchangeId}.` });
+
+        return res.json({ success: true, message: "Exchange disconnected and secondary credentials cleared." });
+      } else {
+        return res.status(404).json({ success: false, error: "Exchange connection configuration not found in Database." });
+      }
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
     }
@@ -2683,12 +2784,32 @@ async function startServer() {
         return res.status(400).json({ success: false, error: "Missing exchangeId parameter." });
       }
 
+      const authenticatedUserId = await getUserIdFromRequest(req);
       const credentials = await getExchangeCredentials(exchangeId);
       if (!credentials) {
         return res.json({ healthy: false, error: "Exchange connection configuration not found in Database." });
       }
 
-      const futuresBaseUrl = credentials.isTestnet ? "https://testnet.binancefuture.com" : "https://fapi.binance.com";
+      const isDemoOrGuest = credentials.userId === "guest_user" || credentials.userId === "user-demo-uid-11111" || exchangeId === "ws-alpha";
+      const isOwner = isDemoOrGuest || (authenticatedUserId && credentials.userId === authenticatedUserId);
+      if (!isOwner) {
+        return res.status(403).json({ healthy: false, error: "Access Denied: You do not own this exchange connection." });
+      }
+
+      const db = getAdminDb();
+      if (db) {
+        const checkUserId = authenticatedUserId || credentials.userId;
+        const isAuthorized = await isUserAuthorizedForLiveTrading(checkUserId, db);
+        if (!isAuthorized) {
+          return res.status(403).json({
+            healthy: false,
+            error: "Access Denied: Only NovaQuant authorized accounts can access Live Trading."
+          });
+        }
+      }
+
+      const isTestnet = false; // Forced to false because testnet is removed
+      const futuresBaseUrl = isTestnet ? "https://testnet.binancefuture.com" : "https://fapi.binance.com";
       const timestamp = Date.now();
       const recvWindow = 5000;
       const queryString = `recvWindow=${recvWindow}&timestamp=${timestamp}`;
@@ -2722,24 +2843,31 @@ async function startServer() {
   app.get("/api/binance/test", async (req, res) => {
     try {
       const exchangeId = req.query.exchangeId as string || req.headers["x-exchange-id"] as string;
+      const authenticatedUserId = await getUserIdFromRequest(req);
+
+      const db = getAdminDb();
+      if (db) {
+        const checkUserId = authenticatedUserId || (req.query.userId as string);
+        if (checkUserId) {
+          const isAuthorized = await isUserAuthorizedForLiveTrading(checkUserId, db);
+          if (!isAuthorized) {
+            return res.status(403).json({
+              connected: false,
+              error: "Access Denied: Only NovaQuant authorized accounts can access Live Trading."
+            });
+          }
+        }
+      }
+
       let apiKey = "";
       let apiSecret = "";
-      let isTestnet = true;
-
-      if (req.query.isTestnet !== undefined) {
-        isTestnet = req.query.isTestnet === "true";
-      } else if (req.headers["x-is-testnet"] !== undefined) {
-        isTestnet = req.headers["x-is-testnet"] === "true";
-      }
+      let isTestnet = false; // Forced to false because testnet is removed
 
       if (exchangeId) {
         const credentials = await getExchangeCredentials(exchangeId);
         if (credentials) {
           apiKey = credentials.apiKey;
           apiSecret = credentials.apiSecret;
-          if (req.query.isTestnet === undefined && req.headers["x-is-testnet"] === undefined) {
-            isTestnet = credentials.isTestnet;
-          }
         }
       }
 
@@ -2751,7 +2879,6 @@ async function startServer() {
           if (creds) {
             apiKey = creds.apiKey;
             apiSecret = creds.apiSecret;
-            isTestnet = creds.isTestnet;
           }
         }
       }
@@ -2767,6 +2894,8 @@ async function startServer() {
           error: "Missing API credentials. Please connect your exchange in Settings first."
         });
       }
+
+      isTestnet = false; // Forced to false because testnet is removed
 
       console.log(`[NovaQuant Binance Test] Connecting to Binance (Testnet: ${isTestnet})...`);
 
@@ -2895,9 +3024,20 @@ async function startServer() {
       const activeUserId = authenticatedUserId || clientUserId || "guest_user";
       const userId = activeUserId;
 
+      const db = getAdminDb();
+      if (db) {
+        const isAuthorized = await isUserAuthorizedForLiveTrading(userId, db);
+        if (!isAuthorized) {
+          return res.status(403).json({
+            success: false,
+            error: "Access Denied: Only NovaQuant authorized accounts can access Live Trading."
+          });
+        }
+      }
+
       let apiKey = "";
       let apiSecret = "";
-      let isTestnet = true;
+      let isTestnet = false; // Forced to false because testnet is removed
       let credentials: any = null;
       let tradingEnabled = true;
 
@@ -3017,6 +3157,8 @@ async function startServer() {
           isTestnet = req.headers["x-is-testnet"] !== "false";
         }
       }
+
+      isTestnet = false; // Strictly enforce live trading mode for all executions
 
       if (!apiKey || !apiSecret) {
         return res.status(400).json({
@@ -3385,35 +3527,72 @@ async function startServer() {
   app.get("/api/binance/account", async (req, res) => {
     try {
       const exchangeId = req.query.exchangeId as string || req.headers["x-exchange-id"] as string;
+      const authenticatedUserId = await getUserIdFromRequest(req);
+      
+      const db = getAdminDb();
+      if (db) {
+        const checkUserId = authenticatedUserId || (req.query.userId as string);
+        if (checkUserId) {
+          const isAuthorized = await isUserAuthorizedForLiveTrading(checkUserId, db);
+          if (!isAuthorized) {
+            return res.status(403).json({
+              connected: false,
+              error: "Access Denied: Only NovaQuant authorized accounts can access Live Trading."
+            });
+          }
+        }
+      }
+
       let apiKey = "";
       let apiSecret = "";
-      let isTestnet = true;
+      let isTestnet = false; // Forced to false because testnet is removed
+      let credentialsOwner = "";
 
       if (exchangeId) {
         const credentials = await getExchangeCredentials(exchangeId);
         if (credentials) {
+          credentialsOwner = credentials.userId;
           apiKey = credentials.apiKey;
           apiSecret = credentials.apiSecret;
-          isTestnet = credentials.isTestnet;
         }
       }
 
       // Fallback to user-specific credentials if not found by exchangeId
       if (!apiKey || !apiSecret) {
-        const reqUserId = await getUserIdFromRequest(req) || req.query.userId as string;
+        const reqUserId = authenticatedUserId || (req.query.userId as string);
         if (reqUserId) {
-          const creds = await getUserBinanceCredentials(reqUserId);
-          if (creds) {
-            apiKey = creds.apiKey;
-            apiSecret = creds.apiSecret;
-            isTestnet = creds.isTestnet;
+          const isDemoOrGuest = reqUserId === "guest_user" || reqUserId === "user-demo-uid-11111";
+          const resolvedUserId = authenticatedUserId || (isDemoOrGuest ? reqUserId : null);
+          if (resolvedUserId) {
+            const creds = await getUserBinanceCredentials(resolvedUserId);
+            if (creds) {
+              credentialsOwner = creds.userId;
+              apiKey = creds.apiKey;
+              apiSecret = creds.apiSecret;
+            }
           }
         }
       }
 
+      isTestnet = false; // Strictly enforce live trading mode
+
+      // Multi-User Isolation: Enforce that only the true owner can access this information
+      const isRegisteredUserOwner = credentialsOwner && credentialsOwner !== "guest_user" && credentialsOwner !== "user-demo-uid-11111";
+      if (isRegisteredUserOwner) {
+        if (!authenticatedUserId || credentialsOwner !== authenticatedUserId) {
+          return res.status(403).json({
+            connected: false,
+            error: "Access Denied: You do not have permission to access another user's account status."
+          });
+        }
+      }
+
       if (!apiKey || !apiSecret) {
-        apiKey = cleanEnvString(req.query.apiKey as string) || cleanEnvString(req.headers["x-binance-api-key"] as string);
-        apiSecret = cleanEnvString(req.query.apiSecret as string) || cleanEnvString(req.headers["x-binance-api-secret"] as string);
+        // Fallback for temporary headers (Only allowed if no authenticated user is logged in, e.g. dev testing)
+        if (!authenticatedUserId) {
+          apiKey = cleanEnvString(req.query.apiKey as string) || cleanEnvString(req.headers["x-binance-api-key"] as string);
+          apiSecret = cleanEnvString(req.query.apiSecret as string) || cleanEnvString(req.headers["x-binance-api-secret"] as string);
+        }
       }
 
       if (!apiKey || !apiSecret) {
